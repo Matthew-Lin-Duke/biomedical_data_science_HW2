@@ -1,0 +1,19 @@
+---
+title: "Untitled"
+author: "Jiacheng Lin"
+date: "2020/2/10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+The 14 attributes used according to the dataset website  
+
+1. #3 (age)  
+2. #4 (sex)  
+3. #9 (cp) chest pain  
+  + Value 1: typical angina  
+  + Value 2: atypical angina  
+  + Value 3: non-anginal pain  
+  + Value 4: asymptomatic  
