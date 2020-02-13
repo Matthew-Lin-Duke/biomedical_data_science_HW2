@@ -8,12 +8,15 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(hexbin)
 ```
 ## Part 1: Get Heart Disease Data Set
 ### Question 1  
 #### *Download Heart Disease data set from UCI Machine Learning Repository*
 ```{bash eval = FALSE}
-wget https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data
+#wget https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data
 ```
 ### Question 2
 #### *Import the file into R and label the column names properly. Note you can get some necessary information from  <https://archive.ics.uci.edu/ml/datasets/Heart+Disease>. Print the first few lines of the dataframe including your header row.*  
@@ -61,7 +64,7 @@ heart_disease <- heart_disease %>% mutate(diagnosed = ifelse(num > 0, TRUE, FALS
 head(heart_disease)
 ```
 ## Part 2: Explore and Visualize Heart Disease Data Set
-### Question 1
+### Question 4
 #### *Summarize the data. Your summary should include the following information below.*
 ##### *i. number of counts by diagnosis status (use “diagnosed” column info)*
 ```{r}
@@ -70,15 +73,17 @@ negative <- summarise(heart_disease, negative = sum(diagnosed == FALSE))
 cat("Positive diagnosed patients number is", positive[1,1], "\n")
 cat("Negative diagnosed patients number is", negative[1,1])
 ```
-Positive diagnosed patients number is 139, and Negative diagnosed patients number is 164.
+Positive diagnosed patients number is 139, and Negative diagnosed patients number is 164.  
+
 ##### *ii. number of counts by sex*
 ```{r}
-male = summarise(heart_disease, male = sum(diagnosed == 1))
-female <- summarise(heart_disease, female = sum(diagnosed == 0))
+male = summarise(heart_disease, male = sum(sex == 1))
+female <- summarise(heart_disease, female = sum(sex == 0))
 cat("Male patients number is", male[1,1], "\n")
 cat("Female patients number is", female[1,1])
 ```
-Male patients number is 139 and female patients number is 164.
+Male patients number is 206 and female patients number is 97.  
+
 ##### *iii. average of cholesterol level by diagnosis status (use “diagnosed” column info)*
 ```{r}
 positive_chol = summarise(heart_disease, chol = mean(chol[diagnosed == TRUE]))
@@ -87,7 +92,8 @@ cat("Positive diagnosed patients average cholesterol is", positive_chol[1,1], "\
 cat("Negative diagnosed patients average cholesterol is", negative_chol[1,1])
 ```
 Positive diagnosed patients average cholesterol is 251.4748 mg/dl 
-and Negative diagnosed patients average cholesterol is 242.6402 mg/dl
+and Negative diagnosed patients average cholesterol is 242.6402 mg/dl  
+
 ##### *iv. min and max of the subjects’ age by diagnosis status (use “diagnosed” column info)*
 ```{r}
 age_pos = summarise(heart_disease, old = max(age[diagnosed == TRUE]), young = min(age[diagnosed == TRUE]))
@@ -98,4 +104,287 @@ cat("The oldest negative diagnosed patient is", age_neg[1,1],
     "and the youngest is", age_neg[1,2])
 ```
 The oldest positive diagnosed patient is 77 and the youngest is 35.
-The oldest negative diagnosed patient is 76 and the youngest is 29.
+The oldest negative diagnosed patient is 76 and the youngest is 29.  
+
+### Question 5  
+#### *Using dplyr, create a new dataframe named "heart_df" that contains information on the subjects’ age, 
+sex, serum cholesterol level, and maximum heart rate, as well as the new column “diagnosed”.*  
+```{r}
+heart_df <- select(heart_disease, age, sex, chol, thalach, diagnosed)
+head(heart_df)
+```
+### Question 6
+#### *Density plots visualize the data distribution. Using ggplot, draw a density function curve of the
+subjects’ age for each of the diseased and healthy groups. What is your observation? Label your axis
+and legend appropriately for full credit.*
+```{r}
+p <- ggplot(data = heart_disease, mapping = aes(x = age, color = diagnosed))
+p + geom_density()+
+  labs(x = "Age/years",
+       y = "Density",
+       title = "Density curve of diseased and healthy groups"
+       )+
+  theme(legend.position = "right")+
+  labs(color="Groups")+
+  scale_color_discrete(labels = c("Healthy","Diseased"))
+```
+  
+It seems that among the diseased group, there are more people in 55~65 than in the healthy group. And most of the healthy group members aged at medium range, which is around 40~60. Another thing is that both groups have very few members at very young age or very old age.  
+
+### Question 7
+#### *Correlation plots are a way to visualize multivariate relationships. Using the `corrplot` package, make a
+correlation plot of the attributes fields found in the new dataframe “heart_df” that you created in Question (6) above. Clearly label your axis and legend for full mark. Which factor has the strongest correlation with the diagnosis status?*  
+```{r}
+corrplot(corr = cor(heart_df),
+         method = "color",
+         title = "Correlation plot of interested attributes",
+         is.corr = TRUE,
+         order = "AOE",
+         addCoef.col = "black",
+         mar = c(0,0,1,0)
+         )
+```
+  
+From the correlation plot, the **thalach(maximum heart rate achieved)** has the strongest correlation with the diagnosis status.  
+
+### Question 8
+#### *Using ggplot, make a scatter plot of age and maximum heart rate. Label (color-code) data points for
+their corresponding diagnosis status and label the axes.*
+```{r}
+p_q8 <- ggplot(data = heart_disease, mapping = aes(x = age, y = thalach, color = diagnosed))
+p_q8 + geom_point()+
+  labs(x = "Age/years",
+       y = "Maximum Heart Rate",
+       title = "Age - Maximum Heart Rate"
+       )+
+  theme(legend.position = "right")+
+  labs(color="Groups")+
+  scale_color_discrete(labels = c("Healthy", "Diseased"))
+```
+  
+### Question 9
+#### *The scatter plot you generate in Question (8) above is probably not the most effective way of
+visualizing our data if we want to learn about the relationship between diagnosis status and age or max
+heart rate. Choose other types of charts (besides correlation plot) to show how age and max heart rate
+are related to the subjects’ diagnosis status. Clearly label your chart. What is your observation? Why
+did you choose the chart of your choice?*
+```{r}
+p_q8 <- ggplot(data = heart_disease, mapping = aes(x = age, y = thalach, fill = diagnosed))
+p_q8 + geom_bin2d(bins = 30)+
+  labs(x = "Age/years",
+       y = "Maximum Heart Rate",
+       title = "Age - Maximum Heart Rate"
+       )+
+  theme(legend.position = "right")+
+  labs(fill = "Groups")+
+  scale_fill_discrete(labels = c("Healthy", "Diseased"))+
+  theme_bw()
+p_q9 <- ggplot(data = heart_disease, mapping = aes(x = age, y = thalach, color = diagnosed))
+p_q9 + geom_density_2d()+
+  stat_density_2d()+
+  geom_point()+
+  labs(x = "Age/years",
+       y = "Maximum Heart Rate",
+       title = "Age - Maximum Heart Rate"
+       )+
+  theme(legend.position = "right")+
+  labs(color = "Groups")+
+  scale_color_discrete(labels = c("Healthy", "Diseased"))
+```
+  
+I tried several types of charts and finally found the **2d histogram** and **2d distribution** particularly useful in this case. By mapping the data points in to a plane, it's not hard to see that the overall distribution of points.  
+It seems in this data set, large portion of the younger group with high maximum heart rate tends to be healthy, while patients of older age with lower maximum heart rate tends to be diseased.
+
+## Part 3: Understand and Transform Heart Disease Data Set
+### Question 10
+#### *A dataset is said to be skewed if the distribution is asymmetrical and shifted to one direction. Show ALL
+codes / plots / answers to the following:*  
+##### *i. Plot a histogram for serum cholesterol level.*  
+```{r}
+p_q10 <- ggplot(data = heart_disease, mapping = aes(x = chol))
+p_q10 + geom_histogram(binwidth=10)
+```
+  
+##### *ii. Is this dataset skewed?* 
+```{r}
+chol_sum = summarise(heart_disease, chol_mean = mean(chol), chol_median = median(chol))
+print(chol_sum)
+```
+From the histogram, I think the dataset is a little bit skewed. Also we can calculate the median and mean of the cholesterol level. The mean is 246.7 and median is 241, thus the dataset is indeed not symmetric.
+##### *iii. Does it have positive skewness or negative skewness?*  
+From the observation from histogram above, along with the `mean > median` from question i, this dataset has positive skewness.
+##### *iv. Compute the skewness using the definition from the lecture.*  
+```{r}
+chol_skew <- summarise(heart_disease, chol_skew = mean(((chol - mean(chol))/sd(chol))**3))
+cat("Skewness statistic is", round(chol_skew[1,1], 3))
+# chol_stat = summarise(heart_disease, chol_mean = mean(chol), chol_sd = sd(chol), chol_var = var(chol))
+# chol_mean = chol_stat[1,1]
+# chol_sd = chol_stat[1,2]
+# chol_standard = transmute(heart_disease, chol_standard = (chol - chol_mean)/chol_sd)
+# summarise(chol_standard, chol_skew2 = mean(chol_standard**3))
+```
+The skewness statistic is **1.124**.
+##### *v. According to the criterion introduced in the lecture, is the cholesterol level dataset moderately
+skewed or highly skewed?*  
+The cholesterol level dataset is highly skewed, since the skewness statistic is larger than 1  
+#### Address skewness of cholesterol dataset
+```{r}
+chol_trans <- transmute(heart_disease, chol_trans = sqrt(chol))
+ggplot(data = chol_trans, mapping = aes(x = chol_trans))+
+  geom_histogram(binwidth = 0.2)
+```
+According to the data transformation guide on Sakai, this dataset should be transformed by using the square root. And after transformation, the histogram does show more symmetric.
+
+### Question 11
+#### *Sometimes, it is necessary to remove extreme outliers (samples >3\*SD from mean), where SD is the
+standard deviation and IQR is the inter quartile range. Show ALL codes / plots / answers to the
+following:*  
+##### *i. Make boxplots of cholesterol level to compare the two diagnosis groups. Note that the serum
+cholesterol level field has some outliers.*  
+```{r}
+ggplot(data = heart_disease, 
+       mapping = aes(
+         x = diagnosed, 
+         y = chol, 
+         fill = diagnosed))+
+  geom_boxplot()+
+  labs(y = "Serum Cholestoral (mg/dl)",
+       x = "Diagnosis Groups",
+       fill = "Diagnoed Groups",
+       title = "Cholesterol level of two diagnosis groups")+
+  scale_fill_discrete(labels = c("Healthy","Diseased"))+
+  guides(fill = FALSE)
+```
+##### *ii. How many of the cholesterol level datapoints are extreme outliers?*  
+```{r}
+is_extreme_outlier <- function(x) {
+  return(x < quantile(x, 0.25) - 3 * IQR(x) | x > quantile(x, 0.75) + 3 * IQR(x))
+}
+summarise(heart_disease, chol[is_extreme_outlier(chol)])
+```
+The definition of extreme outliers is datapoints that are more extreme than `Q1 - 3 * IQR` or `Q3 + 3 * IQR`.  
+With a function to calculate extreme outlier, there is only **1** extreme outlier in the data set.  
+
+##### *iii. One way of minimizing the effects of the outliers is capping, also known as winsorization.
+Typically, you can decide a threshold (typically a specific range of percentiles) and replace all
+the datapoints outside of the threshold with the closest value from within the threshold. An
+example from Wikipedia may be a helpful demonstration: “a 90% winsorization would see all
+data below the 5th percentile set to the 5th percentile, and data above the 95th percentile set
+to the 95th percentile.” Conduct a 90% winsorization on the cholesterol level dataset and show
+the new statistics summary. What is your observation?*  
+```{r}
+winsorize <- function(x){
+    quantiles <- quantile(x, c(.05, .95))
+    x[ x < quantiles[1] ] <- quantiles[1]
+    x[ x > quantiles[2] ] <- quantiles[2]
+    x
+}
+chol_wins = transmute(heart_disease, chol_wins = winsorize(chol), diagnosed)
+ggplot(data = chol_wins, 
+       mapping = aes(
+         x = diagnosed, 
+         y = chol_wins, 
+         fill = diagnosed))+
+  geom_boxplot()+
+  labs(y = "Serum Cholestoral (mg/dl)",
+       x = "Diagnosis Groups",
+       fill = "Diagnoed Groups",
+       title = "Winsorized cholesterol data - diagnosis groups")+
+  scale_fill_discrete(labels = c("Healthy","Diseased"))+
+  guides(fill = FALSE)
+```
+  
+The winsorization removes all the outliers, while the dataset doesn't change much on the boxplot.  
+
+### Question 12
+#### *Transforming data can also alleviate the effects of outliers and skewness. Show ALL codes / plots /
+answers to the following:*  
+##### *i. Standardize the cholesterol level data.*  
+```{r}
+chol_standard = transmute(heart_disease, chol_standard = (chol - mean(chol))/sd(chol))
+```
+##### *ii. Make a density plot of the standardized cholesterol dataset.*  
+```{r}
+ggplot(chol_standard, mapping = aes(x = chol_standard))+
+  geom_density()+
+  labs(x = "Standardized Serum Cholestoral",
+       title = "Standardized Serum Cholestoral Density")
+```
+
+##### *iii. Show the new statistics summary on the standardized cholesterol dataset.*  
+```{r}
+chol_standard_stat = summarise(chol_standard, mean(chol_standard), sd(chol_standard))
+chol_stat = summarise(heart_disease, chol_mean = mean(chol), chol_sd = sd(chol))
+cat("Before standardization, the mean of cholesterol data is", round(chol_stat[1,1]),
+    "and the standard variation is", round(chol_stat[1,2]), "\n")
+cat("After standardization, the mean is", round(chol_standard_stat[1,1]),
+    "and the standard variation is", chol_standard_stat[1,2])
+ggplot(heart_disease, mapping = aes(x = chol))+
+  geom_density()+
+  labs(x = "Serum Cholestoral (mg/dl)",
+       title = "Serum Cholestoral Density")
+```
+Before standardization, the mean of cholesterol data is 247 and the standard variation is 52. After standardization, the mean is 0 and the standard variation is 1.
+
+## Part 3: Understand and Transform Heart Disease Data Set
+### Question 13
+#### *Download Diabetes data set from UCI Machine Learning Repository:
+<https://archive.ics.uci.edu/ml/datasets/Diabetes> in your work folder in the DCC. Show all your
+commands.*
+```{bash, eval = FALSE}
+wget https://archive.ics.uci.edu/ml/machine-learning-databases/diabetes/diabetes-data.tar.Z
+wget https://archive.ics.uci.edu/ml/machine-learning-databases/diabetes/Index
+```
+### Question 14
+#### *Extract the tarball in the command line/Git BASH through the DCC. (Don’t need to show command)*
+```{bash, eval = FALSE}
+gzip -d diabetes-data.tar.Z
+```
+#### *Export one file from Diabetes data (data-XX) to your local directory. This represents the data for each
+participant. Choose any of the participants. Print all your commands.*
+```{bash, eval = FALSE}
+tar vxf diabetes-data.tar
+```
+First execute this line at dcc to uncompress the tar file.
+```{bash, eval = FALSE}
+scp jl915@dcc-slogin-01.oit.duke.edu:~/BME590/HW2/Diabetes-Data/data-55 ./
+```
+Then run this line to get the `data-55` back to local directory.
+
+## Part 4: Explore, Visualize, and Process Diabetes Data
+### Question 16
+#### *Select the 3 pre-meal blood glucose measurements (codes 58, 60, 62). Create a table reporting any
+relevant summary statistics. What is your observation? You may choose to include some plots to
+support your explanation.*
+```{r}
+diabetes_55 <- read.table('data-55')
+colnames(diabetes_55) <- c("date","time","code","value")
+pre_meal = filter(diabetes_55, code == "58"|code == "60"|code == "62")
+pre_meal <- mutate(pre_meal, meal = ifelse(code == 58, "breakfast", ifelse(code == 60, "lunch", "dinner")))
+ggplot(pre_meal, mapping = aes(x = value, color = meal))+
+  geom_density()+
+  labs(x = "Blood Glucose Measurements",
+       title = "Pre-meal Blood Glucose Measurements Density")+
+  scale_color_discrete(limits=c("breakfast", "lunch", "dinner"))
+ggplot(pre_meal, mapping = aes(
+  x = meal, 
+  y = value,
+  fill = meal))+
+  geom_boxplot(position = "dodge")+
+  guides(fill = FALSE)+
+  labs(y = "Blood Glucose Measurements",
+       title = "Pre-meal Blood Glucose Measurements")+
+  scale_x_discrete(limits=c("breakfast", "lunch", "dinner"))
+
+print(summarise(diabetes_55, 
+          brk = mean(value[code == 58]),
+          brk_sd = sd(value[code == 58]),
+          lnch = mean(value[code == 60]),
+          lnch_sd = sd(value[code == 60]),
+          dnn = mean(value[code == 62]),
+          dnn_sd = sd(value[code == 62])))
+```
+It's funny to find out the dataset from participant 66 I chose first has no data coded 58 or 60 or 62. So I just go with the largest file in the whole dataset.  
+For paticipant 55, his/her average blood glucose level is relatively lower before lunch, comparing to other two meals. Though his/her average glucose level before breakfast and dinner is close, the value before dinner has lower standard variance, which means more consistent. This could be seen on the density plots. The box plot shows the distribution of the datapoints before meals.
+
+
